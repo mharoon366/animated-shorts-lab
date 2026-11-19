@@ -61,10 +61,12 @@ report={
 }
 if max(jumps)>.20:
     report["warnings"].append("Bucket position jump greater than 0.20 m in a single frame")
-if gap and max(gap)>.45:
-    report["warnings"].append("Hand not reliably attached to bucket pin (gap above 0.45 m)")
+if gap and max(gap)>.35:
+    report["warnings"].append("Hand not reliably attached to bucket pin (gap above 0.35 m)")
 if sum(face_oob.values()):
     report["warnings"].append("Face center leaves 4%-96% safe viewport at least once")
 os.makedirs(os.path.dirname(outfile),exist_ok=True)
 with open(outfile,"w") as fp:json.dump(report,fp,indent=2)
 print("QUALITY REPORT",json.dumps({k:v for k,v in report.items() if k!="frame_samples"}),flush=True)
+if report["warnings"]:
+    raise SystemExit("FAIL: frame-level motion QA reported: "+", ".join(report["warnings"]))

@@ -420,7 +420,7 @@ for frame in range(1,N+1):
         bucket.rotation_euler=(0,0,0)
     elif t<2.10:
         u=smooth((t-1.35)/.75)
-        bucket.location=(blue_x-.77*u, -.18*u, .86+.46*u)
+        bucket.location=((blue_x-.77)*u, -.18*u, .86+.46*u)
         bucket.rotation_euler=(.12*u,.15*u,0)
     else:
         bucket.location=(blue_x-.77+.12*run,-.18,1.30+.08*run*abs(sin(t*16)))
