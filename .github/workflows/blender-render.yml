@@ -1,11 +1,11 @@
-name: Blender Bucket War Pilot
+name: Blender Production Look and Motion Test
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - "blender/scene.py"
+      - "blender/production_scene.py"
       - ".github/workflows/blender-render.yml"
 
 permissions:
@@ -14,55 +14,65 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Check out project
         uses: actions/checkout@v4
 
-      # Download the official packaged Blender release, avoiding the very slow
-      # Ubuntu apt mirror and its ~160 unrelated dependency downloads.
-      # The setup action caches the Blender installation across runs.
       - name: Install cached Blender release
         uses: bradyajohnston/setup-blender@v5
         timeout-minutes: 12
         with:
           version: "4.5"
 
-      # A packaged FFmpeg build, no apt-get update or Ubuntu repository downloads.
       - name: Install FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v3
         timeout-minutes: 5
 
-      - name: Verify Blender and FFmpeg
+      - name: Verify tools
         run: |
-          blender --version | head -n 3
+          blender --version | head -n 2
           ffmpeg -version | head -n 1
 
-      # Diagnostic run first, 1 sec / 30 frames, 240x426.
-      # Once it succeeds we can raise duration and render quality.
-      - name: Render 1-second 3D diagnostic
-        timeout-minutes: 12
+      - name: Render high-quality hero still
+        timeout-minutes: 10
         run: |
-          mkdir -p output/frames
-          blender -b --python blender/scene.py -- --seconds 1 --width 240 --out output/frames
-          test "$(find output/frames -maxdepth 1 -name 'frame_*.png' | wc -l)" -eq 30
+          mkdir -p output/hero
+          blender -b --python blender/production_scene.py -- \
+            --mode hero --width 540 --out output/hero
+          test -s output/hero/bucket_war_hero.png
 
-      - name: Assemble the 30fps MP4
+      - name: Render 3-second 30fps character action
+        timeout-minutes: 18
+        run: |
+          mkdir -p output/preview
+          blender -b --python blender/production_scene.py -- \
+            --mode preview --seconds 3 --width 360 --out output/preview
+          echo "Rendered frames:"
+          find output/preview/frames -maxdepth 1 -name 'frame_*.png' | wc -l
+          test "$(find output/preview/frames -maxdepth 1 -name 'frame_*.png' | wc -l)" -eq 90
+
+      - name: Encode playable 3-second MP4
         run: |
           ffmpeg -hide_banner -loglevel error -y -framerate 30 -start_number 1 \
-            -i output/frames/frame_%04d.png \
+            -i output/preview/frames/frame_%04d.png \
             -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" \
-            -c:v libx264 -crf 19 -preset medium -pix_fmt yuv420p \
-            -movflags +faststart output/bucket_war_preview.mp4
-          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 output/bucket_war_preview.mp4
+            -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p \
+            -movflags +faststart output/bucket_war_production_test.mp4
+          ffprobe -v error -show_entries format=duration,width,height \
+            -of default=noprint_wrappers=1 output/bucket_war_production_test.mp4
+          test -s output/bucket_war_production_test.mp4
 
-      - name: Upload playable MP4 and source
+      - name: Upload review media and editable scene
         uses: actions/upload-artifact@v4
         with:
-          name: bucket-war-first-render
+          name: bucket-war-production-qa
           path: |
-            output/bucket_war_preview.mp4
-            output/frames/frame_0001.png
-            output/bucket_war_pilot.blend
+            output/bucket_war_production_test.mp4
+            output/hero/bucket_war_hero.png
+            output/hero/bucket_war_production.blend
+            output/preview/frames/frame_0001.png
+            output/preview/frames/frame_0045.png
+            output/preview/frames/frame_0090.png
           retention-days: 14
           if-no-files-found: error
