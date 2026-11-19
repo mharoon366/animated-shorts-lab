@@ -229,7 +229,7 @@ handle_pts=[(.40*cos(pi-j*pi/28),0,.53+.51*sin(pi-j*pi/28)) for j in range(29)]
 line("BUCKET handle arched",(handle_pts),.042,woodalt,bucket)
 for x in (-.40,.40):
     ball("handle pin",(x,-.020,.55),(.075,.061,.075),metal,bucket)
-bucket.location=(0,-.285,.86)
+bucket.location=(0,-.33,.86)
 
 # === Reusable character rig and original identity ===
 def character(name,color,cape_color,x,emblem):
@@ -329,7 +329,7 @@ lamp("separating warm rim light",(2,4,8),900,6,(1,.89,.69))
 bpy.ops.object.camera_add(location=(0,-10.4,3.38))
 cam=bpy.context.object;cam.name="PRODUCTION CAMERA"
 scene=bpy.context.scene;scene.camera=cam
-cam.data.type="PERSP";cam.data.lens=56
+cam.data.type="PERSP";cam.data.lens=48
 cam.data.dof.use_dof=False
 
 # Timeline: anticipation -> grip -> lift -> pursuit; no disjoint image interpolation.
@@ -420,10 +420,10 @@ for frame in range(1,N+1):
         bucket.rotation_euler=(0,0,0)
     elif t<2.10:
         u=smooth((t-1.35)/.75)
-        bucket.location=((blue_x-.77)*u, -.285, .86+.46*u)
+        bucket.location=((blue_x-.77)*u, -.33, .86+.46*u)
         bucket.rotation_euler=(.12*u,.15*u,0)
     else:
-        bucket.location=(blue_x-.77+.12*run,-.285,1.30+.08*run*abs(sin(t*16)))
+        bucket.location=(blue_x-.77+.12*run,-.33,1.30+.08*run*abs(sin(t*16)))
         bucket.rotation_euler=(.11*sin(t*9),.13*sin(t*12),-.11*sin(t*14))
     k(bucket,"location",frame);k(bucket,"rotation_euler",frame)
     # Analytic two-bone IK, locking the thief's left glove to the bucket handle.

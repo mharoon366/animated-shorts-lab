@@ -41,8 +41,8 @@ for f in frames:
 contact=[s for s in samples if s["seconds"]>=1.35]
 gap=[s["grip_gap_m"] for s in contact]
 jumps=[s.get("bucket_step_m",0) for s in samples]
-face_oob={str(i):sum(not (0.04<=s["face_viewport"][i][0]<=.96 and
-                           0.04<=s["face_viewport"][i][1]<=.96)
+face_oob={str(i):sum(not (0.15<=s["face_viewport"][i][0]<=.85 and
+                           0.12<=s["face_viewport"][i][1]<=.88)
                      for s in samples)
           for i in range(len(faces))}
 report={
@@ -64,7 +64,7 @@ if max(jumps)>.20:
 if gap and max(gap)>.20:
     report["warnings"].append("Hand not reliably attached to bucket pin (gap above 0.20 m)")
 if sum(face_oob.values()):
-    report["warnings"].append("Face center leaves 4%-96% safe viewport at least once")
+    report["warnings"].append("Face center leaves tighter safe viewport at least once")
 os.makedirs(os.path.dirname(outfile),exist_ok=True)
 with open(outfile,"w") as fp:json.dump(report,fp,indent=2)
 print("QUALITY REPORT",json.dumps({k:v for k,v in report.items() if k!="frame_samples"}),flush=True)
