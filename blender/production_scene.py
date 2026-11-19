@@ -301,8 +301,8 @@ def character(name,color,cape_color,x,emblem):
                 cape=cape,legs=legs,knees=knees,feet=feet,brows=brows,
                 mouth=mouth,smile=smile,eyes=eyes)
 
-guard=character("BOLOGNA_GUARD",red,redshadow,-1.65,"tower")
-thief=character("MODENA_THIEF",blue,blueshadow,1.75,"hawk")
+guard=character("BOLOGNA_GUARD",red,redshadow,-1.15,"tower")
+thief=character("MODENA_THIEF",blue,blueshadow,.85,"hawk")
 
 # Lightweight FX with actual 3D placement.
 droplets=[]
@@ -329,17 +329,17 @@ lamp("separating warm rim light",(2,4,8),900,6,(1,.89,.69))
 bpy.ops.object.camera_add(location=(0,-10.4,3.38))
 cam=bpy.context.object;cam.name="PRODUCTION CAMERA"
 scene=bpy.context.scene;scene.camera=cam
-cam.data.type="PERSP";cam.data.lens=43
+cam.data.type="PERSP";cam.data.lens=36
 cam.data.dof.use_dof=False
 
 # Timeline: anticipation -> grip -> lift -> pursuit; no disjoint image interpolation.
 N=max(90,FRAMES)
 for frame in range(1,N+1):
     t=(frame-1)/30
-    blue_x=interpolate([(0,1.75),(.54,.96),(1.28,.88),(1.93,.92),(2.25,1.2),
-                        (3.0,2.70),(5,7.6),(10,15)],t)
-    red_x=interpolate([(0,-1.65),(1.55,-1.65),(2.0,-1.45),(3,-.30),
-                       (5,3.0),(10,10)],t)
+    blue_x=interpolate([(0,.85),(2.12,.85),(2.36,.95),(3.0,1.78),
+                        (5,5.0),(10,13.0)],t)
+    red_x=interpolate([(0,-1.15),(2.12,-1.15),(2.40,-1.05),(3,-.49),
+                       (5,2.8),(10,9)],t)
     reach=smooth((t-.61)/.48)*(1-smooth((t-2.18)/.28))
     lift=smooth((t-1.34)/.72)
     run=smooth((t-2.09)/.35)
@@ -350,7 +350,7 @@ for frame in range(1,N+1):
                                     (guard,red_x,guard_run,.19*guard_run,surprised)]:
         actor["root"].location=(x,-.32,.025+phase*.065*abs(sin((t-2.0)*16)))
         actor["torso"].rotation_euler.y=lean
-        actor["torso"].rotation_euler.x= -.08*reach if actor is thief else 0
+        actor["torso"].rotation_euler.x=0  # keep IK working in the arm/shoulder plane
         actor["head"].rotation_euler.y=.10*sin(t*3.3)
         actor["head"].rotation_euler.z=(-.09*reach if actor is thief else .11*alarm)
         actor["cape"].rotation_euler.x=-.13-.23*phase+.08*sin(t*7.1)
@@ -393,28 +393,44 @@ for frame in range(1,N+1):
         bucket.location=(blue_x-.77*u, -.18*u, .86+.46*u)
         bucket.rotation_euler=(.12*u,.15*u,0)
     else:
-        bucket.location=(blue_x-.43,-.21,1.30+.08*run*abs(sin(t*16)))
+        bucket.location=(blue_x-.77+.12*run,-.18,1.30+.08*run*abs(sin(t*16)))
         bucket.rotation_euler=(.11*sin(t*9),.13*sin(t*12),-.11*sin(t*14))
     k(bucket,"location",frame);k(bucket,"rotation_euler",frame)
-    # Approximate a hand-to-bucket side grip across the lift and early escape.
-    # Future production rig will replace this with a full two-bone IK solver.
-    if .88<=t:
-        side_x=bucket.location.x+.32
-        hand_x=blue_x-.365
-        dz=(bucket.location.z+.43)-1.58
-        dx=side_x-hand_x
-        aim=math.atan2(-dx,-dz)
-        aim=max(-1.65,min(1.35,aim))
-        hold=smooth((t-.88)/.16)
-        left=thief["arms"][0]
-        left.rotation_euler.y=left.rotation_euler.y*(1-hold)+aim*hold
-        thief["elbows"][0].rotation_euler.y=-.18*hold
-        k(left,"rotation_euler",frame)
-        k(thief["elbows"][0],"rotation_euler",frame)
+    # Analytic two-bone IK, locking the thief's left glove to the bucket handle.
+    # The same moving bucket object is followed during lift and escape.
+    if t>=.60:
+        arm=thief["arms"][0]
+        elbow=thief["elbows"][0]
+        lean=thief["torso"].rotation_euler.y
+        rootz=thief["root"].location.z
+        # Target = near-side bucket handle pin, including a modest handle swing.
+        target_x=bucket.location.x+.395
+        target_z=bucket.location.z+.54
+        dx_world=target_x-blue_x
+        dz_world=target_z-(rootz+.89)
+        # Transform target into torso space before solving the linked arm.
+        lx=cos(lean)*dx_world-sin(lean)*dz_world
+        lz=sin(lean)*dx_world+cos(lean)*dz_world
+        dx=lx+.365      # shoulder origin in torso coordinates
+        dz=lz-.69
+        upper=.40
+        forearm=.32
+        length=max(abs(upper-forearm)+.002,min(upper+forearm-.003,math.hypot(dx,dz)))
+        c2=max(-1,min(1,(length*length-upper*upper-forearm*forearm)/(2*upper*forearm)))
+        q2=math.acos(c2)
+        theta=math.atan2(-dx,-dz)
+        q1=theta-math.atan2(forearm*sin(q2),upper+forearm*cos(q2))
+        # Ease into the physical grip, then hold the connection continuously.
+        w=smooth((t-.60)/.67)
+        arm.rotation_euler.y=(1-w)*arm.rotation_euler.y+w*q1
+        arm.rotation_euler.x=0
+        elbow.rotation_euler.y=(1-w)*elbow.rotation_euler.y+w*q2
+        k(arm,"rotation_euler",frame)
+        k(elbow,"rotation_euler",frame)
     for i,d in enumerate(droplets):
         age=t-(2.24+i*.11)
         if 0<=age<.54:
-            bx=interpolate([(0,1.75),(2.25,1.2),(3,2.7),(5,7.6)],2.24+i*.11)
+            bx=interpolate([(0,.85),(2.25,.85),(3,1.78),(5,5.0)],2.24+i*.11)
             d.location=(bx-.36+age*(.6+(i%3)*.33), -.21+(.05*(i%4)),
                         1.40+age*(1.4+.16*(i%4))-4.8*age*age)
         else:d.location=(0,0,-30)
@@ -431,15 +447,15 @@ for frame in range(1,N+1):
         f.rotation_euler.z=.10*sin(t*3.4+i)
         k(f,"rotation_euler",frame)
     # Slow, spatially coherent dolly as thief begins escape.
-    cx=interpolate([(0,0),(1.5,0),(2.3,.12),(3,.78),(10,8)],t)
-    cam.location=(cx,-10.4,3.38+.07*sin(t*.8))
+    cx=interpolate([(0,0),(2.25,0),(3,.28),(10,7.5)],t)
+    cam.location=(cx,-10.2,3.25+.045*sin(t*.8))
     cam.rotation_euler=(Vector((cx,0,1.65))-cam.location).to_track_quat("-Z","Y").to_euler()
     k(cam,"location",frame);k(cam,"rotation_euler",frame)
 
 # Output: modest rendering cost but significantly richer geometry and materials.
 scene.render.engine="CYCLES"
 scene.cycles.device="CPU"
-scene.cycles.samples=9 if MODE=="preview" else 32
+scene.cycles.samples=11 if MODE=="preview" else 48
 scene.cycles.use_denoising=True
 scene.render.resolution_x=WIDTH if WIDTH%2==0 else WIDTH+1
 scene.render.resolution_y=round(scene.render.resolution_x*16/9/2)*2
