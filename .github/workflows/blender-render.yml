@@ -25,11 +25,9 @@ jobs:
         with:
           version: "4.5"
 
-      - name: Verify tools
+      - name: Verify Blender
         run: |
           blender --version | head -n 2
-          command -v ffmpeg
-          ffmpeg -version | head -n 1
 
       - name: Render high-quality hero still
         timeout-minutes: 10
@@ -39,37 +37,29 @@ jobs:
             --mode hero --width 540 --out output/hero
           test -s output/hero/bucket_war_hero.png
 
-      - name: Render 3-second 30fps character action
+      - name: Render 3-second 30fps H.264 video in Blender
         timeout-minutes: 18
         run: |
           mkdir -p output/preview
           blender -b --python blender/production_scene.py -- \
             --mode preview --seconds 3 --width 360 --out output/preview
-          echo "Rendered frames:"
-          find output/preview/frames -maxdepth 1 -name 'frame_*.png' | wc -l
-          test "$(find output/preview/frames -maxdepth 1 -name 'frame_*.png' | wc -l)" -eq 90
-
-      - name: Encode playable 3-second MP4
-        run: |
-          ffmpeg -hide_banner -loglevel error -y -framerate 30 -start_number 1 \
-            -i output/preview/frames/frame_%04d.png \
-            -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" \
-            -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p \
-            -movflags +faststart output/bucket_war_production_test.mp4
-          ffprobe -v error -show_entries format=duration,width,height \
-            -of default=noprint_wrappers=1 output/bucket_war_production_test.mp4
-          test -s output/bucket_war_production_test.mp4
+          test -s output/preview/bucket_war_production_test.mp4
+          python3 - <<'PY'
+          import os, struct
+          p='output/preview/bucket_war_production_test.mp4'
+          with open(p,'rb') as f: header=f.read(24)
+          assert b'ftyp' in header, 'Not a valid MP4'
+          assert os.stat(p).st_size > 8192, 'Empty MP4 output'
+          print('Validated MP4 bytes:',os.stat(p).st_size)
+          PY
 
       - name: Upload review media and editable scene
         uses: actions/upload-artifact@v4
         with:
           name: bucket-war-production-qa
           path: |
-            output/bucket_war_production_test.mp4
+            output/preview/bucket_war_production_test.mp4
             output/hero/bucket_war_hero.png
             output/hero/bucket_war_production.blend
-            output/preview/frames/frame_0001.png
-            output/preview/frames/frame_0045.png
-            output/preview/frames/frame_0090.png
           retention-days: 14
           if-no-files-found: error

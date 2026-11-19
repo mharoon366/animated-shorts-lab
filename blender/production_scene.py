@@ -432,8 +432,14 @@ if MODE=="hero":
     print("HERO RENDER",scene.render.resolution_x,scene.render.resolution_y,flush=True)
     bpy.ops.render.render(write_still=True)
 else:
-    os.makedirs(os.path.join(OUT,"frames"),exist_ok=True)
-    scene.render.filepath=os.path.join(OUT,"frames","frame_")
-    print("PREVIEW RENDER",scene.frame_end,scene.render.resolution_x,scene.render.resolution_y,flush=True)
+    # Blender official builds include FFmpeg libraries for direct H.264 export,
+    # so there is no fragile third-party GitHub setup step.
+    scene.render.image_settings.file_format="FFMPEG"
+    scene.render.image_settings.color_mode="RGB"
+    scene.render.ffmpeg.format="MPEG4"
+    scene.render.ffmpeg.codec="H264"
+    scene.render.ffmpeg.constant_rate_factor="HIGH"
+    scene.render.filepath=os.path.join(OUT,"bucket_war_production_test.mp4")
+    print("PREVIEW MPEG4",scene.frame_end,scene.render.resolution_x,scene.render.resolution_y,flush=True)
     bpy.ops.render.render(animation=True)
 print("RENDER COMPLETE",flush=True)
