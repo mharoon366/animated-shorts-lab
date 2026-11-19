@@ -326,10 +326,10 @@ def lamp(name,loc,energy,size,rgb):
 lamp("large warm late-afternoon key",(-6,-5,10),1250,7,(1,.82,.65))
 lamp("soft cool sky bounce",(4,-3,7),550,9,(.68,.82,1))
 lamp("separating warm rim light",(2,4,8),900,6,(1,.89,.69))
-bpy.ops.object.camera_add(location=(0,-9.2,3.15))
+bpy.ops.object.camera_add(location=(0,-10.4,3.38))
 cam=bpy.context.object;cam.name="PRODUCTION CAMERA"
 scene=bpy.context.scene;scene.camera=cam
-cam.data.type="PERSP";cam.data.lens=50
+cam.data.type="PERSP";cam.data.lens=43
 cam.data.dof.use_dof=False
 
 # Timeline: anticipation -> grip -> lift -> pursuit; no disjoint image interpolation.
@@ -396,6 +396,21 @@ for frame in range(1,N+1):
         bucket.location=(blue_x-.43,-.21,1.30+.08*run*abs(sin(t*16)))
         bucket.rotation_euler=(.11*sin(t*9),.13*sin(t*12),-.11*sin(t*14))
     k(bucket,"location",frame);k(bucket,"rotation_euler",frame)
+    # Approximate a hand-to-bucket side grip across the lift and early escape.
+    # Future production rig will replace this with a full two-bone IK solver.
+    if .88<=t:
+        side_x=bucket.location.x+.32
+        hand_x=blue_x-.365
+        dz=(bucket.location.z+.43)-1.58
+        dx=side_x-hand_x
+        aim=math.atan2(-dx,-dz)
+        aim=max(-1.65,min(1.35,aim))
+        hold=smooth((t-.88)/.16)
+        left=thief["arms"][0]
+        left.rotation_euler.y=left.rotation_euler.y*(1-hold)+aim*hold
+        thief["elbows"][0].rotation_euler.y=-.18*hold
+        k(left,"rotation_euler",frame)
+        k(thief["elbows"][0],"rotation_euler",frame)
     for i,d in enumerate(droplets):
         age=t-(2.24+i*.11)
         if 0<=age<.54:
@@ -417,7 +432,7 @@ for frame in range(1,N+1):
         k(f,"rotation_euler",frame)
     # Slow, spatially coherent dolly as thief begins escape.
     cx=interpolate([(0,0),(1.5,0),(2.3,.12),(3,.78),(10,8)],t)
-    cam.location=(cx,-9.2,3.15+.07*sin(t*.8))
+    cam.location=(cx,-10.4,3.38+.07*sin(t*.8))
     cam.rotation_euler=(Vector((cx,0,1.65))-cam.location).to_track_quat("-Z","Y").to_euler()
     k(cam,"location",frame);k(cam,"rotation_euler",frame)
 
