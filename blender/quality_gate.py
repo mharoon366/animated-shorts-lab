@@ -61,8 +61,8 @@ report={
 }
 if max(jumps)>.20:
     report["warnings"].append("Bucket position jump greater than 0.20 m in a single frame")
-if gap and max(gap)>.35:
-    report["warnings"].append("Hand not reliably attached to bucket pin (gap above 0.35 m)")
+if gap and max(gap)>.20:
+    report["warnings"].append("Hand not reliably attached to bucket pin (gap above 0.20 m)")
 if sum(face_oob.values()):
     report["warnings"].append("Face center leaves 4%-96% safe viewport at least once")
 os.makedirs(os.path.dirname(outfile),exist_ok=True)
