@@ -14,21 +14,38 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 25
     steps:
       - name: Check out project
         uses: actions/checkout@v4
 
-      - name: Install Blender and FFmpeg
-        run: |
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends blender ffmpeg
-          blender --version | head -n 3
+      # Download the official packaged Blender release, avoiding the very slow
+      # Ubuntu apt mirror and its ~160 unrelated dependency downloads.
+      # The setup action caches the Blender installation across runs.
+      - name: Install cached Blender release
+        uses: bradyajohnston/setup-blender@v5
+        timeout-minutes: 12
+        with:
+          version: "4.5"
 
-      - name: Render 2-second 3D motion test in Cycles CPU
+      # A packaged FFmpeg build, no apt-get update or Ubuntu repository downloads.
+      - name: Install FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 5
+
+      - name: Verify Blender and FFmpeg
+        run: |
+          blender --version | head -n 3
+          ffmpeg -version | head -n 1
+
+      # Diagnostic run first, 1 sec / 30 frames, 240x426.
+      # Once it succeeds we can raise duration and render quality.
+      - name: Render 1-second 3D diagnostic
+        timeout-minutes: 12
         run: |
           mkdir -p output/frames
-          blender -b --python blender/scene.py -- --seconds 2 --width 360 --out output/frames
+          blender -b --python blender/scene.py -- --seconds 1 --width 240 --out output/frames
+          test "$(find output/frames -maxdepth 1 -name 'frame_*.png' | wc -l)" -eq 30
 
       - name: Assemble the 30fps MP4
         run: |
@@ -38,7 +55,7 @@ jobs:
             -movflags +faststart output/bucket_war_preview.mp4
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 output/bucket_war_preview.mp4
 
-      - name: Upload playable MP4 and preview frame
+      - name: Upload playable MP4 and source
         uses: actions/upload-artifact@v4
         with:
           name: bucket-war-first-render
