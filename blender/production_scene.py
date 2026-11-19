@@ -147,12 +147,21 @@ def interpolate(keys,t):
     return keys[-1][1]
 
 # === Layered hand-built Italian courtyard, no heavy texture downloads ===
-cube("ground base",(0,3.6,-.20),(34,22,.38),soil,.09)
-for i in range(150):
+# Ground brick shader forms coherent mortar lines; loose pieces are only accents.
+ground_paving=material("full courtyard brick paving",(.54,.42,.31),.94)
+n=ground_paving.node_tree.nodes;lk=ground_paving.node_tree.links
+br=n.new("ShaderNodeTexBrick");br.inputs["Scale"].default_value=48
+br.inputs["Color1"].default_value=(.59,.47,.37,1)
+br.inputs["Color2"].default_value=(.46,.37,.29,1)
+br.inputs["Mortar"].default_value=(.28,.235,.19,1)
+br.inputs["Mortar Size"].default_value=.012
+lk.new(br.outputs["Color"],n.get("Principled BSDF").inputs["Base Color"])
+cube("ground base",(0,3.6,-.20),(34,22,.38),ground_paving,.02)
+for i in range(44):
     x=random.uniform(-7,7);y=random.uniform(-2.9,5.7)
     if abs(x)<.72 and abs(y)<.72:continue
-    s=random.uniform(.23,.56);h=random.uniform(.018,.048)
-    p=cube("individual bevelled cobblestone",(x,y,h/2),(s,random.uniform(.20,.45),h),
+    s=random.uniform(.10,.26);h=random.uniform(.008,.016)
+    p=cube("individual bevelled cobblestone",(x,y,h/2),(s,random.uniform(.09,.20),h),
            stone if i%5==0 else paving if i%3 else stone2,.016)
     p.rotation_euler.z=random.uniform(-.20,.20)
 for x in range(-17,18,3):
@@ -261,6 +270,7 @@ def character(name,color,cape_color,x,emblem):
         brows.append(brow);eyes.append(eye)
     ball(name+" small round nose",(0,-.425,-.04),(.057,.028,.045),white,head)
     mouth=ball(name+" changing mouth",(0,-.433,-.16),(.12,.023,.052),ink,head)
+    smile=line(name+" subtle lower smile",[(-.09,-.434,-.14),(0,-.455,-.165),(.09,-.434,-.14)],.013,ink,head)
     # Cloth beret made of two pieces, detailed with a stitched band.
     ball(name+" dark hat brim",(0,-.08,.45),(.53,.34,.095),ink,head,sides=36)
     ball(name+" beret crown",(0,-.035,.53),(.50,.345,.20),color,head,sides=36)
@@ -289,7 +299,7 @@ def character(name,color,cape_color,x,emblem):
         legs.append(hip);knees.append(knee);feet.append(foot)
     return dict(root=root,torso=torso,head=head,arms=arms,elbows=elbows,
                 cape=cape,legs=legs,knees=knees,feet=feet,brows=brows,
-                mouth=mouth,eyes=eyes)
+                mouth=mouth,smile=smile,eyes=eyes)
 
 guard=character("BOLOGNA_GUARD",red,redshadow,-1.65,"tower")
 thief=character("MODENA_THIEF",blue,blueshadow,1.75,"hawk")
@@ -316,10 +326,10 @@ def lamp(name,loc,energy,size,rgb):
 lamp("large warm late-afternoon key",(-6,-5,10),1250,7,(1,.82,.65))
 lamp("soft cool sky bounce",(4,-3,7),550,9,(.68,.82,1))
 lamp("separating warm rim light",(2,4,8),900,6,(1,.89,.69))
-bpy.ops.object.camera_add(location=(0,-10.5,3.4))
+bpy.ops.object.camera_add(location=(0,-9.2,3.15))
 cam=bpy.context.object;cam.name="PRODUCTION CAMERA"
 scene=bpy.context.scene;scene.camera=cam
-cam.data.type="PERSP";cam.data.lens=40
+cam.data.type="PERSP";cam.data.lens=50
 cam.data.dof.use_dof=False
 
 # Timeline: anticipation -> grip -> lift -> pursuit; no disjoint image interpolation.
@@ -330,7 +340,7 @@ for frame in range(1,N+1):
                         (3.0,2.70),(5,7.6),(10,15)],t)
     red_x=interpolate([(0,-1.65),(1.55,-1.65),(2.0,-1.45),(3,-.30),
                        (5,3.0),(10,10)],t)
-    reach=smooth((t-.61)/.50)*(1-smooth((t-1.45)/.55))
+    reach=smooth((t-.61)/.48)*(1-smooth((t-2.18)/.28))
     lift=smooth((t-1.34)/.72)
     run=smooth((t-2.09)/.35)
     guard_run=smooth((t-2.0)/.38)
@@ -345,13 +355,14 @@ for frame in range(1,N+1):
         actor["head"].rotation_euler.z=(-.09*reach if actor is thief else .11*alarm)
         actor["cape"].rotation_euler.x=-.13-.23*phase+.08*sin(t*7.1)
         actor["cape"].rotation_euler.y=.10*sin(t*5.2-.55)
-        actor["mouth"].scale.z=.052+.115*alarm
-        actor["mouth"].scale.x=.12+.038*alarm
+        actor["mouth"].scale.z=.016+.135*alarm
+        actor["mouth"].scale.x=.085+.060*alarm
+        actor["smile"].scale=(1-alarm*.97,1-alarm*.97,1-alarm*.97)
         k(actor["root"],"location",frame)
         for node,prop in [(actor["torso"],"rotation_euler"),
                           (actor["head"],"rotation_euler"),
                           (actor["cape"],"rotation_euler"),
-                          (actor["mouth"],"scale")]:
+                          (actor["mouth"],"scale"),(actor["smile"],"scale")]:
             k(node,prop,frame)
         for j,b in enumerate(actor["brows"]):
             b.rotation_euler.y=(-.23 if j else .23)*(1+alarm*.6)
@@ -360,9 +371,9 @@ for frame in range(1,N+1):
         for j,(arm,elbow) in enumerate(zip(actor["arms"],actor["elbows"])):
             a=sin((t-2)*16 + j*pi)
             if actor is thief:
-                arm.rotation_euler.y= (.67*reach if j==0 else -.33*reach) + a*.62*phase
+                arm.rotation_euler.y= (.42*reach if j==0 else -.29*reach) + a*.55*phase
                 arm.rotation_euler.x= -.14*reach
-                elbow.rotation_euler.y=(-.52*reach if j==0 else .12*reach)
+                elbow.rotation_euler.y=(-.17*reach if j==0 else .12*reach)
             else:
                 arm.rotation_euler.y= (.23*alarm if j==0 else -.12*alarm)+ a*.66*phase
                 elbow.rotation_euler.y=.14*alarm
@@ -397,7 +408,7 @@ for frame in range(1,N+1):
         if t>2.15:
             phase=(t*2.6+i*.19)%1
             d.location=(blue_x-phase*.6,-.20,.05+phase*.26)
-            d.scale=(.6+phase,.6+phase,.3+phase*.45)
+            d.scale=(.12+phase*.08,.12+phase*.10,.08+phase*.04)
         else:d.location=(0,0,-30)
         k(d,"location",frame);k(d,"scale",frame)
     for i,f in enumerate((red_flag,blue_flag)):
@@ -406,7 +417,7 @@ for frame in range(1,N+1):
         k(f,"rotation_euler",frame)
     # Slow, spatially coherent dolly as thief begins escape.
     cx=interpolate([(0,0),(1.5,0),(2.3,.12),(3,.78),(10,8)],t)
-    cam.location=(cx,-10.5,3.5+.10*sin(t*.8))
+    cam.location=(cx,-9.2,3.15+.07*sin(t*.8))
     cam.rotation_euler=(Vector((cx,0,1.65))-cam.location).to_track_quat("-Z","Y").to_euler()
     k(cam,"location",frame);k(cam,"rotation_euler",frame)
 
