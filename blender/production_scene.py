@@ -416,7 +416,7 @@ for frame in range(1,N+1):
             k(foot,"rotation_euler",frame)
     # One continuous physical bucket path; no duplicate object substitutions.
     if t<1.35:
-        bucket.location=(0,0,.86)
+        bucket.location=(0,-.285,.86)
         bucket.rotation_euler=(0,0,0)
     elif t<2.10:
         u=smooth((t-1.35)/.75)

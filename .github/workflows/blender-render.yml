@@ -37,6 +37,13 @@ jobs:
             --mode hero --width 540 --out output/hero
           test -s output/hero/bucket_war_hero.png
 
+      - name: Report continuity, grip gap and framing across all 90 frames
+        timeout-minutes: 3
+        run: |
+          blender -b output/hero/bucket_war_production.blend --python blender/quality_gate.py -- \
+            --out output/quality_report.json
+          test -s output/quality_report.json
+
       - name: Render 3-second 30fps H.264 video in Blender
         timeout-minutes: 18
         run: |
@@ -52,13 +59,6 @@ jobs:
           assert os.stat(p).st_size > 8192, 'Empty MP4 output'
           print('Validated MP4 bytes:',os.stat(p).st_size)
           PY
-
-      - name: Report continuity, grip gap and framing across all 90 frames
-        timeout-minutes: 3
-        run: |
-          blender -b output/hero/bucket_war_production.blend --python blender/quality_gate.py -- \
-            --out output/quality_report.json
-          test -s output/quality_report.json
 
       - name: Upload review media and editable scene
         uses: actions/upload-artifact@v4
