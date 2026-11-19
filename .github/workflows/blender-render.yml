@@ -53,6 +53,13 @@ jobs:
           print('Validated MP4 bytes:',os.stat(p).st_size)
           PY
 
+      - name: Report continuity, grip gap and framing across all 90 frames
+        timeout-minutes: 3
+        run: |
+          blender -b output/hero/bucket_war_production.blend --python blender/quality_gate.py -- \
+            --out output/quality_report.json
+          test -s output/quality_report.json
+
       - name: Upload review media and editable scene
         uses: actions/upload-artifact@v4
         with:
@@ -60,6 +67,7 @@ jobs:
           path: |
             output/preview/bucket_war_production_test.mp4
             output/hero/bucket_war_hero.png
+            output/quality_report.json
             output/hero/bucket_war_production.blend
           retention-days: 14
           if-no-files-found: error

@@ -348,7 +348,7 @@ for frame in range(1,N+1):
     # Animate root, gravity-inspired bob, body lean, cape lag and facial acting.
     for actor,x,phase,lean,alarm in [(thief,blue_x,run,.32*reach-.18*run,0),
                                     (guard,red_x,guard_run,.19*guard_run,surprised)]:
-        actor["root"].location=(x,-.32,.025+phase*.065*abs(sin((t-2.0)*16)))
+        actor["root"].location=(x,-.25 if actor is thief else -.32,.025+phase*.018*abs(sin((t-2.0)*16)))
         actor["torso"].rotation_euler.y=lean
         actor["torso"].rotation_euler.x=0  # keep IK working in the arm/shoulder plane
         actor["head"].rotation_euler.y=.10*sin(t*3.3)
@@ -378,12 +378,42 @@ for frame in range(1,N+1):
                 arm.rotation_euler.y= (.23*alarm if j==0 else -.12*alarm)+ a*.66*phase
                 elbow.rotation_euler.y=.14*alarm
             k(arm,"rotation_euler",frame);k(elbow,"rotation_euler",frame)
+        # Eyes follow the bucket (thief) and chase (guard) with separate acting controls.
+        for eye in actor["eyes"]:
+            neutral=.170 if eye.location.x>0 else -.170
+            eye.location.x=neutral+(-.035*reach if actor is thief else .033*alarm)
+            k(eye,"location",frame)
+        # Ground-oriented gait: two-bone leg solution with a stance / swing cycle.
+        # A planted stance receives little height motion; swing moves the boot on an arc.
         for j,(leg,knee,foot) in enumerate(zip(actor["legs"],actor["knees"],actor["feet"])):
-            step=sin((t-2)*16 + j*pi)*phase
-            leg.rotation_euler.y=.72*step
-            knee.rotation_euler.y=max(0,-step)*.42
-            foot.rotation_euler.y=-.16*step
-            k(leg,"rotation_euler",frame);k(knee,"rotation_euler",frame);k(foot,"rotation_euler",frame)
+            old_step=sin((t-2)*16+j*pi)*phase
+            old_upper=.72*old_step
+            old_knee=max(0,-old_step)*.42
+            stance_weight=smooth((t-2.12)/.39)*phase
+            cycle=((t-2.24)*2.25+j*.5)%1.0
+            if cycle<.56:
+                off=.125*(1-2*cycle/.56)
+                foot_lift=0
+            else:
+                frac=(cycle-.56)/.44
+                off=-.125+.25*smooth(frac)
+                foot_lift=.18*sin(frac*pi)
+            # Hip origin under root, foot pivot at a stable ground-level target.
+            hip_z=actor["root"].location.z+.88
+            dx=off
+            dz=(.190+foot_lift)-hip_z
+            l1=.36;l2=.39
+            reachdist=max(abs(l1-l2)+.002,min(l1+l2-.003,math.hypot(dx,dz)))
+            cosq=max(-1,min(1,(reachdist**2-l1*l1-l2*l2)/(2*l1*l2)))
+            q2=math.acos(cosq)
+            theta=math.atan2(-dx,-dz)
+            q1=theta-math.atan2(l2*sin(q2),l1+l2*cos(q2))
+            leg.rotation_euler.y=(1-stance_weight)*old_upper+stance_weight*q1
+            knee.rotation_euler.y=(1-stance_weight)*old_knee+stance_weight*q2
+            foot.rotation_euler.y=(1-stance_weight)*(-.16*old_step)+stance_weight*(-.72*(q1+q2))
+            k(leg,"rotation_euler",frame)
+            k(knee,"rotation_euler",frame)
+            k(foot,"rotation_euler",frame)
     # One continuous physical bucket path; no duplicate object substitutions.
     if t<1.35:
         bucket.location=(0,0,.86)
@@ -449,7 +479,7 @@ for frame in range(1,N+1):
     # Slow, spatially coherent dolly as thief begins escape.
     cx=interpolate([(0,0),(2.25,0),(3,.28),(10,7.5)],t)
     cam.location=(cx,-10.2,3.25+.045*sin(t*.8))
-    cam.rotation_euler=(Vector((cx,0,1.65))-cam.location).to_track_quat("-Z","Y").to_euler()
+    cam.rotation_euler=(Vector((cx,0,2.10))-cam.location).to_track_quat("-Z","Y").to_euler()
     k(cam,"location",frame);k(cam,"rotation_euler",frame)
 
 # Output: modest rendering cost but significantly richer geometry and materials.
