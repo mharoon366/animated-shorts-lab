@@ -35,3 +35,7 @@ The reference creator's footage, characters, textures and proprietary assets are
 5. Add reusable narration, captions, audio and episode templates.
 
 This repository uses GitHub's standard public-repository runners, not paid GPU instances. Rendering speed and visual quality will require iterative testing.
+
+## Production-quality upgrade
+
+The newer [production scene](blender/production_scene.py) uses a shaped character rig, procedural weathering, modular medieval architecture, detailed bucket hardware, and continuous three-second choreography. [Production quality and geometry budget](PRODUCTION_STANDARD.md) sets visual/animation targets. The automated workflow exports both a hero still and a 3-second H.264 motion test. This is a **quality gate**, not yet a complete Short.

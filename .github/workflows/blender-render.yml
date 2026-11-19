@@ -25,13 +25,10 @@ jobs:
         with:
           version: "4.5"
 
-      - name: Install FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
-        timeout-minutes: 5
-
       - name: Verify tools
         run: |
           blender --version | head -n 2
+          command -v ffmpeg
           ffmpeg -version | head -n 1
 
       - name: Render high-quality hero still

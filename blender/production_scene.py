@@ -345,8 +345,8 @@ for frame in range(1,N+1):
         actor["head"].rotation_euler.z=(-.09*reach if actor is thief else .11*alarm)
         actor["cape"].rotation_euler.x=-.13-.23*phase+.08*sin(t*7.1)
         actor["cape"].rotation_euler.y=.10*sin(t*5.2-.55)
-        actor["mouth"].scale.z=(.05+.13*alarm)/.052
-        actor["mouth"].scale.x=1+.22*alarm
+        actor["mouth"].scale.z=.052+.115*alarm
+        actor["mouth"].scale.x=.12+.038*alarm
         k(actor["root"],"location",frame)
         for node,prop in [(actor["torso"],"rotation_euler"),
                           (actor["head"],"rotation_euler"),
