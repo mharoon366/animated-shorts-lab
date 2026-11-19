@@ -51,6 +51,7 @@ jobs:
         run: |
           ffmpeg -hide_banner -loglevel error -y -framerate 30 -start_number 1 \
             -i output/frames/frame_%04d.png \
+            -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" \
             -c:v libx264 -crf 19 -preset medium -pix_fmt yuv420p \
             -movflags +faststart output/bucket_war_preview.mp4
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 output/bucket_war_preview.mp4
